@@ -116,12 +116,12 @@ namespace Fitness
         {
             var l = L.MkInitialValues(s);
             var r = R.MkInitialValues(s);
-            return new object[] { Operation(l.First(), r.First()) }.Concat(l).Concat(r);
+            return new object[] { 0 }.Concat(l).Concat(r);
         }
 
         internal override IEnumerable<Property> MkProps()
         {
-            return new[] { Prop };
+            return new[] { Prop }.Concat(L.MkProps()).Concat(R.MkProps());
         }
 
         internal override void Eval(AccState in_state, Simulation sim, AccState out_state)
@@ -169,12 +169,12 @@ namespace Fitness
 
         internal override IEnumerable<object> MkInitialValues(Simulation s)
         {
-            return new[] { s.PropertyCache.Properties.ContainsKey(Prop.Name) ? s.PropertyCache.Properties[Prop.Name].Value : 0.0 };
+            return new[] { s.PropertyCache.Properties.ContainsKey(Prop.Name) ? s.PropertyCache.Properties[Prop.Name].Value : 0.0 }.Concat(Op.MkInitialValues(s));
         }
 
         internal override IEnumerable<Property> MkProps()
         {
-            return new[] { Prop };
+            return new[] { Prop }.Concat(Op.MkProps());
         }
 
         internal override void Eval(AccState in_state, Simulation sim, AccState out_state)
@@ -219,7 +219,7 @@ namespace Fitness
             var t = ThenBranch.MkInitialValues(s);
             var e = ElseBranch.MkInitialValues(s);
             return new object[]
-            { (bool)c.First() ? t.First() : e.First() }.Concat(c).Concat(t).Concat(e);
+            { null }.Concat(c).Concat(t).Concat(e);
         }
 
         internal override IEnumerable<Property> MkProps()
