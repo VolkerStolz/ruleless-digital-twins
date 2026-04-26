@@ -199,16 +199,9 @@ namespace Fitness
         // We accumulate the values of a property by overriding `Operation`.
         // Construct "fake" property to hold accumulator value derived from the object id(!), not the name.
         // The "cool" hack is that you can also use an FOp(-result) as input.
-        public FAcc(Property prop, String? name = null)
-        {
-            this.IsOp = false; // XXX Needs another safetynet, since the Propety must come from the simulation.
-            this.Orig = prop;
-            this.Prop = new Property() { OwlType = prop.OwlType, Name = name ?? GetHashCode().ToString() + "_ACC", Value = null };
-        }
 
         public FAcc(FOp op, String? name = null)
         {
-            this.IsOp = true;
             this.Op = op;
             this.Orig = op.Prop;
             this.Prop = new Property() { OwlType = op.Prop.OwlType, Name = name ?? GetHashCode().ToString() + "_ACC", Value = null };
@@ -216,7 +209,7 @@ namespace Fitness
 
         internal override IEnumerable<object> MkInitialValues(Simulation s)
         {
-            return new[] { IsOp ? (s.PropertyCache.Properties.ContainsKey(Prop.Name) ? s.PropertyCache.Properties[Prop.Name].Value : 0.0) : s.PropertyCache.Properties[Orig.Name].Value };
+            return new[] { s.PropertyCache.Properties.ContainsKey(Prop.Name) ? s.PropertyCache.Properties[Prop.Name].Value : 0.0 };
         }
 
         internal override IEnumerable<Property> MkProps()
@@ -226,21 +219,13 @@ namespace Fitness
 
         internal override void Eval(AccState in_state, Simulation sim, AccState out_state)
         {
-            if (IsOp)
-            {
-                Op!.Eval(in_state, sim, out_state);
-                out_state.Set(Prop, (T)in_state.Get(Prop) + (T)in_state.Get(Orig)); // XXX better be sure that's already calculated
-            }
-            else
-            {
-                out_state.Set(Prop, (T)in_state.Get(Prop) + (T)sim.PropertyCache.Properties[Orig.Name].Value);
-            }
+            Op.Eval(in_state, sim, out_state);
+            out_state.Set(Prop, (T)in_state.Get(Prop) + (T)in_state.Get(Orig)); // XXX better be sure that's already calculated
         }
 
         Property Orig { get; }
-        bool IsOp { get; }
 
-        private readonly FOp? Op = null;
+        private readonly FOp Op;
     }
 
     public class FRelOp<T> : FBinOp<bool> where T : INumber<T>
