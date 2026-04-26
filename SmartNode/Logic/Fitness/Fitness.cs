@@ -26,8 +26,7 @@ namespace Fitness
 
         internal object Get(Property prop)
         {
-            object outP;
-            Properties.TryGetValue(prop.Name, out outP);
+            Properties.TryGetValue(prop.Name, out object outP);
             return outP;
         }
 
@@ -46,50 +45,11 @@ namespace Fitness
         }
     }
 
-    // Computer the average of a property.
-    // TODO: Should probably inherit from Facc<>, but I didn't manage reuse of the superclass yet.
-    class FAvg<T> : FOp where T : INumber<T>
+    public class Fitness(Simulation simulation)
     {
-        int counter = 1;
-        public FAvg(Property prop)
-        {
-            this.Orig = prop;
-            this.Acc = new Property() { OwlType = prop.OwlType, Name = GetHashCode().ToString() + "_ACC", Value = null };
-            // Output:
-            this.Prop = new Property() { OwlType = prop.OwlType, Name = GetHashCode().ToString() + "_AVG", Value = null };
-        }
-
-        internal override IEnumerable<object> MkInitialValues(Simulation s)
-        {
-            return new[] { Orig.Value };
-        }
-
-        internal override IEnumerable<Property> MkProps()
-        {
-            return new[] { Prop, Acc };
-        }
-
-        internal override void Eval(AccState in_state, Simulation sim, AccState out_state)
-        {
-            counter++;
-            out_state.Set(Acc, (T)in_state.Get(Acc) + (T)sim.PropertyCache.Properties[Orig.Name].Value);
-            out_state.Set(Prop, (T)out_state.Get(Acc) / T.CreateChecked(counter));
-        }
-
-        Property Acc { get; }
-        Property Orig { get; }
-    }
-
-    public class Fitness
-    {
-        public Simulation previous;
+        public Simulation previous = simulation;
         // We support multiple "root" expressions.
         required public IEnumerable<FOp> FOps { get; init; }
-
-        public Fitness(Simulation simulation)
-        {
-            previous = simulation;
-        }
 
         internal AccState Process(AccState state, Simulation simulation)
         {
@@ -220,7 +180,7 @@ namespace Fitness
         internal override void Eval(AccState in_state, Simulation sim, AccState out_state)
         {
             Op.Eval(in_state, sim, out_state);
-            out_state.Set(Prop, (T)in_state.Get(Prop) + (T)in_state.Get(Orig)); // XXX better be sure that's already calculated
+            out_state.Set(Prop, (T)in_state.Get(Prop) + (T)out_state.Get(Orig));
         }
 
         Property Orig { get; }
