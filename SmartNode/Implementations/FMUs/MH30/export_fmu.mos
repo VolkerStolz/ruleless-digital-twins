@@ -1,0 +1,14 @@
+loadFile("mh30_tank.mo");
+getErrorString();
+
+checkModel(WarmWaterTank);
+getErrorString();
+
+OpenModelica.Scripting.buildModelFMU(
+  WarmWaterTank,
+  version    = "2.0",
+  fmuType    = "cs",
+  platforms = ["dynamic"],
+  fileNamePrefix = "mh30_tank"
+);
+getErrorString();

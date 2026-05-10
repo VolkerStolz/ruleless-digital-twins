@@ -52,7 +52,11 @@ class Actuator(Node):
         g.add((self.node, RDF["type"], OWL["NamedIndividual"]))
         g.add((self.node, RDF["type"], SOSA["Actuator"]))
         if enacts is not None:
-            g.add((self.node, RDT["enacts"], enacts.node))
+            if isinstance(enacts, list):
+                for e in enacts:
+                    g.add((self.node, RDT["enacts"], e.node))
+            else:
+                g.add((self.node, RDT["enacts"], enacts.node))
         if actuatorName is not None:
             g.add((self.node, RDT["hasActuatorName"], Literal(actuatorName, datatype=XSD.string)))
         for s in actuatorStates:

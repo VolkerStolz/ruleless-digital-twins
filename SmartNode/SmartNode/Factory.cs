@@ -10,6 +10,9 @@ using Implementations.Sensors.Incubator;
 using Implementations.Actuators.Incubator;
 using Implementations.SimulatedTwinningTargets;
 using Implementations.Sensors.Fakepool;
+using Implementations.Sensors.HomeAssistant;
+using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
 
 namespace SmartNode
 {
@@ -48,6 +51,26 @@ namespace SmartNode
                                     "http://www.semanticweb.org/vs/ontologies/2025/12/incubator#TempProcedure",
                                     d => d.average_temperature)
                             }
+                        }
+                    }
+                },
+                {
+                    "mh30",
+                    new SensorActuatorMapWrapper {
+                        ActuatorMap = new()
+                        {
+                            { // XXX TODO
+                                "http://www.semanticweb.org/vs/ontologies/2026/05/mh30#WaterHeaterActuator",
+                                new DummyHeater("http://www.semanticweb.org/vs/ontologies/2026/05/mh30#WaterHeaterActuator")
+                            }
+                        },
+                        SensorMap = new() {
+                            {
+                                ("http://www.semanticweb.org/vs/ontologies/2026/05/mh30#TempSensor",
+                                "http://www.semanticweb.org/vs/ontologies/2026/05/mh30#TempProcedure"),
+                                new HomeAssistantSensor("http://www.semanticweb.org/vs/ontologies/2026/05/mh30#T_water",
+                                    "sensor.water_temperature", null, _httpClient)
+                            },
                         }
                     }
                 },
@@ -228,6 +251,9 @@ namespace SmartNode
             { "http://www.w3.org/2001/XMLSchema#boolean", new BooleanValueHandler() }
         };
         private readonly IncubatorAdapter? _incubatorAdapter;
+        private readonly HttpClient _httpAdapter;
+        private readonly HttpClient _httpClient;
+
         // Changing the environment variable's value requires restarting Visual Studio before it's visible.
         private const string HostNameEnvironmentVariableName = "AU_INCUBATOR_RABBITMQ_HOST_NAME";
 
@@ -243,8 +269,22 @@ namespace SmartNode
                     await _incubatorAdapter.Setup();
                 });
                 t.Wait();
-            }
+            } else if ("mh30".Equals(_environment)) {
+                var handler = new SocketsHttpHandler {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+                };
+                var secrets = new ConfigurationBuilder().AddUserSecrets<Factory>().Build();
 
+                var haURI = Environment.GetEnvironmentVariable("MH30_HA_URI") ?? "localhost";
+                var TOKEN = secrets["HA:TOKEN"];
+                Debug.Assert(TOKEN != null, $"No token for host {haURI}.");
+
+                _httpClient = new HttpClient(handler, disposeHandler: false) {
+                    BaseAddress = new Uri(haURI)
+                };
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {TOKEN}");
+                _httpClient.DefaultRequestHeaders.Add("User-Agent", "SmartNodeTestClient/1.0");
+            }
             _sensorActuatorMaps = MakeSensorMap();
         }
 
