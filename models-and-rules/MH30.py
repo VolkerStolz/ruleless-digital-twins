@@ -9,7 +9,7 @@ g.bind("rdt", RDT)
 
 g.add((URIRef(str(MINE)), OWL.imports, URIRef(str(RDT))))
 
-temperature = ObservableProperty(g, MINE["T_Water"], None)
+temperature = ObservableProperty(g, MINE["T_water"], None)
 consumption = ObservableProperty(g, MINE["y_E_consumed_kWh"], None)
 
 heaterChange = Change(g, MINE["WaterHeaterChange"], temperature, increase=True)

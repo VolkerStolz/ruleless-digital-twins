@@ -753,36 +753,27 @@ namespace Logic.Mapek
             AssignPropertyCacheCopyValues(fmuInstance, outCache, model.Variables);
         }
 
-        private void AssignSimulationInputsToParameters(String flavour, IModel model, IInstance fmuInstance, IEnumerable<(string, string, object)> fmuInputs) {
-            IEnumerable<String> ignoredVars = [];
-            foreach (var input in fmuInputs) {
-                // We filter inputs by those accepted by the actual FMU.
-                // TODO: figure out if we should do this outside of this loop here.
-                if (model.Variables.TryGetValue(input.Item1, out var fmuVariable)){
-                    var valueHandler = _factory.GetValueHandlerImplementation(input.Item2);
-                    valueHandler.WriteValueToSimulationParameter(fmuInstance, fmuVariable, input.Item3);
-                } else {
-                    // might want to remove this in the future:
-                    ignoredVars = ignoredVars.Append(input.Item1);
-                }
+        private void AssignSimulationInputsToParameters(string flavour, IModel model, IInstance fmuInstance, IEnumerable<(string, string, object)> fmuInputs) {
+            var inputs = fmuInputs.Join(model.Variables, input => input.Item1, mv => mv.Key,
+                (i, v) => new { i, v });
+            foreach (var input in inputs) {
+                var valueHandler = _factory.GetValueHandlerImplementation(input.i.Item2);
+                valueHandler.WriteValueToSimulationParameter(fmuInstance, input.v.Value, input.i.Item3);
             }
-            _logger.LogDebug("FMU {f} not relevant: {variables}", flavour, ignoredVars);
         }
 
         private void AssignPropertyCacheCopyValues(IInstance fmuInstance, PropertyCache propertyCacheCopy, IReadOnlyDictionary<string, IVariable> fmuOutputs)
         {
             // Find the correct Property from the simpler output variable name and assign its value.
             var logMsg = "";
-            foreach (var fmuOutput in fmuOutputs)
-            {
-                foreach (var propertyName in propertyCacheCopy.Properties.Keys.Where(propertyName => propertyName.EndsWith($"{fmuOutput.Key}")))
-                {
-                    var valueHandler = _factory.GetValueHandlerImplementation(propertyCacheCopy.Properties[propertyName].OwlType);
-                    var value = valueHandler.GetValueFromSimulationParameter(fmuInstance, fmuOutput.Value);
+            var outputs = fmuOutputs.Join(propertyCacheCopy.Properties, fmuOutput => fmuOutput.Key, property => MapekUtilities.GetSimpleName(property.Key),
+                (fmu, p) => new { fmu, p });
+            foreach (var o in outputs) {
+                    var valueHandler = _factory.GetValueHandlerImplementation(o.p.Value.OwlType);
+                    var value = valueHandler.GetValueFromSimulationParameter(fmuInstance, o.fmu.Value);
 
-                    logMsg += $"{propertyName}: {value}\n";
-                    propertyCacheCopy.Properties[propertyName].Value = value;
-                }
+                    logMsg += $"{o.p.Key}: {value}\n";
+                    propertyCacheCopy.Properties[o.p.Key].Value = value;
             }
             _logger.LogInformation("New values:\n{vals}", logMsg);   
         }

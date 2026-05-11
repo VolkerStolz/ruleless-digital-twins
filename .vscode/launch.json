@@ -15,6 +15,19 @@
             "cwd": "${workspaceFolder}/SmartNode/SmartNode",
             "stopAtEntry": false,
             "console": "internalConsole"
+        },
+        {
+            "name": "MH30",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "dotnet: build",
+            "program": "${workspaceFolder}/SmartNode/SmartNode/bin/Debug/net8.0/SmartNode.dll",
+            "args": ["--appsettings", "appsettings-mh30.json"],
+             "env": {"MH30_HA_URI" : "https://mh30.foldr.org:8123"},
+            "cwd": "${workspaceFolder}/SmartNode/SmartNode",
+            "stopAtEntry": false,
+            "console": "internalConsole"
         }
+
     ]
 }
