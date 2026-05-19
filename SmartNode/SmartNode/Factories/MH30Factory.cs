@@ -1,9 +1,9 @@
 ﻿using Logic.TTComponentInterfaces;
 using Logic.FactoryInterface;
-using Implementations.Actuators.RoomM370;
 using Implementations.Sensors.HomeAssistant;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using Implementations.Actuators.HomeAssistant;
 
 namespace SmartNode.Factories {
     public class MH30Factory : AbstractFactory, IFactory
@@ -12,9 +12,12 @@ namespace SmartNode.Factories {
         protected override IDictionary<string, IActuator> MakeActuatorMap(IServiceProvider serviceProvider)
         {
             return new Dictionary<string, IActuator> {
-                            { // XXX TODO
+                            {
                                 "http://www.semanticweb.org/vs/ontologies/2026/05/mh30#WaterHeaterActuator",
-                                new DummyHeater("http://www.semanticweb.org/vs/ontologies/2026/05/mh30#WaterHeaterActuator",
+                                new HomeAssistantActuator("http://www.semanticweb.org/vs/ontologies/2026/05/mh30#WaterHeaterActuator",
+                                "switch.ikea_of_sweden_tradfri_control_outlet_switch",
+                                // "switch.socket_warm_water_switch",
+                                HomeAssistantActuator.ActuatorKind.Switch, _httpClient,
                                     null)
                             }
             };
