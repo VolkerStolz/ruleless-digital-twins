@@ -68,6 +68,7 @@ namespace SmartNode
             // Register services here.
             builder.Services.AddLogging(loggingBuilder =>
             {
+                loggingBuilder.ClearProviders(); // We install a custom format next:
                 loggingBuilder.AddConsole(options => options.TimestampFormat = "HH:mm:ss ");
             });
             builder.Services.AddSingleton(filepathArguments);

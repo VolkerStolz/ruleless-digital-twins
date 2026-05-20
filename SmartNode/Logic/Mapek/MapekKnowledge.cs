@@ -176,6 +176,10 @@ namespace Logic.Mapek {
             _inferredModel.Clear();
 
             _turtleParser.Load(_instanceModel, _filepathArguments.InstanceModelFilepath);
+            if (!File.Exists(_filepathArguments.InferredModelFilepath)) {
+                _logger.LogDebug("Inferred model file {name} did not exist, creating an empty file.", _filepathArguments.InferredModelFilepath);
+                File.Create(_filepathArguments.InferredModelFilepath);
+            }
             _turtleParser.Load(_inferredModel, _filepathArguments.InferredModelFilepath);
         }
 
