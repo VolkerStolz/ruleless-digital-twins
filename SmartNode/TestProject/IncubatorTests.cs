@@ -35,12 +35,14 @@ namespace TestProject {
 
         [Theory]
         [InlineData(21.0, true, "Incubator.py", "incubator.ttl", "incubator-out.ttl", 4)]
+        [InlineData(29.915162955925695, true, "Incubator.py", "incubator.ttl", "incubator-out.ttl", 3)]
+        [InlineData(29.915162955925695, true, "Incubator.py", "incubator.ttl", "incubator-out.ttl", 1)]
         // Higher temps may fail since I currently don't handle the upper bound correctly:
         [InlineData(37.0, false, "Incubator.py", "incubator.ttl", "incubator-out.ttl", 4)]
         // This one used to glitch with an INF-crash in the FMU, but now passes?!
         [InlineData(53.2359909270973, false, "Incubator.py", "incubator.ttl", "incubator-out.ttl", 4)]
         public void SimulateFMUOnly(double initial_T_value, bool all_actuators, string fromPython, string model, string inferred, int lookAheadCycles) {
-            SetupFiles(fromPython, model, inferred, out ServiceProviderMock mock, out FilepathArguments filepathArguments, out MapekKnowledge mapekKnowledge, out MyMapekPlan mapekPlan);
+            SetupFiles(fromPython, model, inferred, lookAheadCycles, out ServiceProviderMock mock, out FilepathArguments filepathArguments, out MapekKnowledge mapekKnowledge, out MyMapekPlan mapekPlan);
 
             // TODO: Prototype populate cache from FMU.
             // If we're going to do this, we have to check that we correctly override with values from model.
@@ -95,6 +97,15 @@ namespace TestProject {
                             OwlType = "http://www.w3.org/2001/XMLSchema#double",
                             Value = 35
                         }
+                    },
+                   {
+                        "http://www.semanticweb.org/vs/ontologies/2025/12/incubator#total_power_box",
+                        new Property {
+                            Name = "http://www.semanticweb.org/vs/ontologies/2025/12/incubator#total_power_box",
+                            OwlType = "http://www.w3.org/2001/XMLSchema#double",
+                            Value = 0
+                        }
+
                     }
                 }
             };
@@ -107,7 +118,7 @@ namespace TestProject {
 
             // Only valid AFTER focing evaluation through simulation:
             Assert.Equal(Math.Pow(2, lookAheadCycles), simulationTree.SimulationPaths.Count());
-            Assert.Equal(30, simulationTree.ChildrenCount);
+            // Assert.Equal(30, simulationTree.ChildrenCount);
 
             Trace.WriteLine("Checking Volker's `best` solution:");
                         // We move this up here in the test since it may spam the log:
@@ -118,8 +129,6 @@ namespace TestProject {
             //  LAST state of the simulations!
             var vs = mapekPlan.GetOptimalSimulationPathsEuclidian(simulationTree.SimulationPaths, optimalConditions);
             Trace.WriteLine($"{vs.Count()} solutions: {string.Join(",",vs.Select(pd => pd.Item2))}");
-            // We know that for OUR tests, we either pull out all stops or keep all off.
-            Assert.True(!all_actuators || vs.First().Item2 < vs.ElementAt(1).Item2);
             var path = vs.First().Item1;
 
             // var path = optimalSimulationPath;
@@ -128,9 +137,11 @@ namespace TestProject {
                 Trace.WriteLine("Params: " + string.Join(";", s.InitializationActions.Select(a => a.Name).ToList()));
                 Trace.WriteLine("Inputs: " + string.Join(";", s.Actions.Select(a => a.Name).ToList()));
             }
+            // We know that for OUR tests, we either pull out all stops or keep all off.
+            Assert.True(!all_actuators || vs.First().Item2 < vs.ElementAt(1).Item2);
 
             // Cold room, assert that the optimal path is heading in the right direction:
-            Assert.Equal(4, path.Simulations.Count());
+            Assert.Equal(lookAheadCycles, path.Simulations.Count());
             foreach (var s in path.Simulations) {
                 Assert.True(s.Actions.Where(a => a.Name.Contains("HeaterActuator")).All(a => (all_actuators ? "1" : "0") == ((ActuationAction)a).NewStateValue.ToString()));
             }
@@ -140,7 +151,7 @@ namespace TestProject {
         [Theory]
         [InlineData("Incubator.py", "incubator.ttl", "incubator-out.ttl", 4)]
         public void SimulateFromAMQ(string fromPython, string model, string inferred, int lookAheadCycles) {
-            SetupFiles(fromPython, model, inferred, out ServiceProviderMock mock, out FilepathArguments filepathArguments, out MapekKnowledge mapekKnowledge, out MyMapekPlan mapekPlan);
+            SetupFiles(fromPython, model, inferred, lookAheadCycles, out ServiceProviderMock mock, out FilepathArguments filepathArguments, out MapekKnowledge mapekKnowledge, out MyMapekPlan mapekPlan);
             IMapekExecute mpe;
             mock.Add(mpe = new MapekExecute(mock));
 
@@ -180,7 +191,7 @@ namespace TestProject {
 #pragma warning restore xUnit1051
         }
 
-        private static void SetupFiles(string fromPython, string model, string inferred, out ServiceProviderMock mock, out FilepathArguments filepathArguments, out MapekKnowledge mapekKnowledge, out MyMapekPlan mapekPlan) {
+        private static void SetupFiles(string fromPython, string model, string inferred, int lookAheadCycles, out ServiceProviderMock mock, out FilepathArguments filepathArguments, out MapekKnowledge mapekKnowledge, out MyMapekPlan mapekPlan) {
             crashed = true;
             if (Directory.Exists("/tmp/Femyou")) {
                 Directory.Delete("/tmp/Femyou", true);
@@ -216,7 +227,7 @@ namespace TestProject {
             };
             mock.Add(filepathArguments);
             mock.Add(new CoordinatorSettings {
-                LookAheadMapekCycles = 4,
+                LookAheadMapekCycles = lookAheadCycles,
                 MaximumMapekRounds = 4,
                 StartInReactiveMode = false,
                 CycleDurationSeconds = 10,

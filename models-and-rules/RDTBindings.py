@@ -21,11 +21,11 @@ class FMU(Node):
         g.add((self.node, RDT["hasURI"], Literal(fmuPath, datatype=XSD.anyURI)))
 
 class ObservableProperty(Node):
-    def __init__(self, g, name, restriction=None):
+    def __init__(self, g, name, value: Optional[Literal]=None):
         self.node = name
         g.add((self.node, RDF["type"], SOSA["ObservableProperty"]))
         g.add((self.node, RDF["type"], OWL["NamedIndividual"]))
-        g.add((self.node, RDT["hasValue"], Literal("0.0", datatype=XSD.double)))
+        g.add((self.node, RDT["hasValue"], Literal("0.0", datatype=XSD.double) if value is None else value))
 
 class Property(Node):
     def __init__(self, g, name, value = 0.0):
