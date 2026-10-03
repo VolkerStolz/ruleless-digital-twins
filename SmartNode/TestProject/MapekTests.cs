@@ -1,6 +1,7 @@
 ﻿using Fitness;
 using Implementations.Sensors.Fakepool;
 using Logic.CaseRepository;
+using TestProject.Utilities;
 using Logic.FactoryInterface;
 using Logic.Mapek;
 using Logic.Models.DatabaseModels;
@@ -43,6 +44,8 @@ namespace TestProject
             // Refresh model (#70):
             var model = Path.GetFullPath(Path.Combine(rootDirectory, "models-and-rules", "M370.ttl"));
             File.Copy(model.ToString(), filepathArguments.InstanceModelFilepath.ToString(), true);
+            FusekiTestHelper.UploadInstanceModel(filepathArguments.InstanceModelFilepath);
+            serviceProvider.Add(new FusekiArguments());
 
             var coordinatorSettings = new CoordinatorSettings
             {
@@ -199,6 +202,8 @@ namespace TestProject
                 OntologyFilepath = Path.GetFullPath(Path.Combine(rootDirectory, "ontology", "ruleless-digital-twins.ttl"))
             };
             serviceProvider.Add(filepathArguments);
+            FusekiTestHelper.UploadInstanceModel(filepathArguments.InstanceModelFilepath);
+            serviceProvider.Add(new FusekiArguments());
 
             var coordinatorSettings = new CoordinatorSettings
             {

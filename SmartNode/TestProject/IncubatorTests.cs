@@ -1,4 +1,5 @@
 using Implementations.ValueHandlers;
+using TestProject.Utilities;
 using Logic.TTComponentInterfaces;
 using Logic.FactoryInterface;
 using Logic.Mapek;
@@ -222,6 +223,8 @@ namespace TestProject {
                 CycleDurationSeconds = 10,
                 Environment = "incubator"
             });
+            FusekiTestHelper.UploadInstanceModel(modelFilePath);
+            mock.Add(new FusekiArguments());
             mapekKnowledge = new MapekKnowledge(mock);
             mock.Add<IMapekKnowledge>(mapekKnowledge);
             mapekPlan = new MyMapekPlan(mock);

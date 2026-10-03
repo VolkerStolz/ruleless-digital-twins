@@ -293,49 +293,8 @@ namespace Logic.Mapek
         }
 
         protected virtual void InferActionCombinations() {
-            // Execute the inference engine as an external process.
-            var processInfo = new ProcessStartInfo {
-                FileName = "java", // Assumes JAVA is registered in the PATH environment variable (or equivalent).
-                Arguments = $"-jar \"{_filepathArguments.InferenceEngineFilepath}\" " +
-                    $"\"{_filepathArguments.OntologyFilepath}\" " +
-                    $"\"{_filepathArguments.InstanceModelFilepath}\" " +
-                    $"\"{_filepathArguments.InferenceRulesFilepath}\" " +
-                    $"\"{_filepathArguments.InferredModelFilepath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WorkingDirectory = Directory.GetParent(_filepathArguments.InstanceModelFilepath)!.FullName
-            };
-
-            _logger.LogInformation("Inferring action combinations.");
-            using var process = Process.Start(processInfo);
-            Debug.Assert(process != null, "Process failed to start.");
-
-            var javaInvocationAsyncError = false;
-            void SetError() => javaInvocationAsyncError = true;
-            process!.OutputDataReceived += (sender, e) => {
-                _logger.LogInformation(e.Data);
-                if (e.Data != null && e.Data.Contains("Error!")) {
-                    SetError(); // Async was here
-                }
-            };
-
-            process.ErrorDataReceived += (sender, e) => {
-                _logger.LogInformation(e.Data);
-            };
-
-            _logger.LogInformation("Process started with ID {processId}.", process.Id);
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            process.WaitForExit();
-
-            if (process.ExitCode != 0) {
-                throw new Exception($"The inference engine encountered an error. Process {process.Id} exited with code {process.ExitCode}.");
-            }
-
-            Debug.Assert(!javaInvocationAsyncError, "Inconsistencies detected.");
-            _logger.LogInformation("Process {processId} exited with code {processExitCode}.", process.Id, process.ExitCode);
+            // The instance model was committed to Fuseki beforehand; have Fuseki apply the inference rules to it.
+            _mapekKnowledge.InferModelInKnowledgeBase();
         }
 
         // This method currently only supports ActuationActions.
@@ -358,7 +317,7 @@ namespace Logic.Mapek
                 GROUP BY ?actionCombination");
 
             // Make sure the updated inferred model is reloaded before querying for ActionCombinations.
-            _mapekKnowledge.LoadModelsFromKnowledgeBase();
+            // _mapekKnowledge.LoadModelsFromKnowledgeBase();
             
             var actionCombinationQueryResult = _mapekKnowledge.ExecuteQuery(actionCombinationQuery, true);
 
@@ -389,12 +348,12 @@ namespace Logic.Mapek
                         var actuatorType = split[1];
                         string? paramName = null; // Apologies for the confusing attribute name (see `actuatorName` above).
                         if (actionResult.TryGetValue("actuatorName", out var paramNameNode)) {
-                            paramName = paramNameNode.ToString().Split('^')[0];
+                            paramName = paramNameNode?.ToString().Split('^')[0];
                         }
                         // Check if we're dealing with initialization of the FMU:
                         bool isParameter = false;
                         if (actionResult.TryGetValue("isParameter", out var isParameterNode)) {
-                            string isParamStr = isParameterNode.ToString().Split('^')[0];
+                            string isParamStr = isParameterNode?.ToString().Split('^')[0];
                             isParameter = isParamStr == "true";
                         }
 

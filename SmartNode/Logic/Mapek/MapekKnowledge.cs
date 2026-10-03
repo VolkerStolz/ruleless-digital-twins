@@ -9,6 +9,7 @@ using VDS.RDF;
 using VDS.RDF.Parsing;
 using VDS.RDF.Query;
 using VDS.RDF.Query.Datasets;
+using VDS.RDF.Storage;
 using VDS.RDF.Update;
 using VDS.RDF.Writing;
 
@@ -29,22 +30,21 @@ namespace Logic.Mapek {
 
         private readonly ILogger<IMapekKnowledge> _logger;
         private readonly IFactory _factory;
-        private readonly FilepathArguments _filepathArguments;
+        private readonly FusekiConnector _instanceModelConnector;
+        private readonly FusekiConnector _inferredModelConnector;
 
         private Graph _instanceModel;
         private Graph _inferredModel;
-        private readonly TurtleParser _turtleParser;
-        private readonly CompressingTurtleWriter _turtleWriter;
 
         public MapekKnowledge(IServiceProvider serviceProvider) {
             _logger = serviceProvider.GetRequiredService<ILogger<IMapekKnowledge>>();
             _factory = serviceProvider.GetRequiredService<IFactory>();
-            _filepathArguments = serviceProvider.GetRequiredService<FilepathArguments>();
-            _turtleWriter = new CompressingTurtleWriter();
+            var fusekiArguments = serviceProvider.GetRequiredService<FusekiArguments>();
+            _instanceModelConnector = new FusekiConnector(new Uri(fusekiArguments.InstanceModelUri));
+            _inferredModelConnector = new FusekiConnector(new Uri(fusekiArguments.InferredModelUri));
 
             _instanceModel = new Graph();
             _inferredModel = new Graph();
-            _turtleParser = new TurtleParser();
             LoadModelsFromKnowledgeBase();
             
             // If nothing was loaded, don't start the loop.
@@ -85,13 +85,8 @@ namespace Logic.Mapek {
         }
 
         public SparqlResultSet ExecuteQuery(SparqlParameterizedString query, bool useInferredModel = false) {
-            SparqlResultSet queryResult;
-            
-            if (useInferredModel) {
-                queryResult = (SparqlResultSet)_inferredModel.ExecuteQuery(query);
-            } else {
-                queryResult = (SparqlResultSet)_instanceModel.ExecuteQuery(query);
-            }
+            var connector = useInferredModel ? _inferredModelConnector : _instanceModelConnector;
+            var queryResult = (SparqlResultSet)connector.Query(query.ToString());
 
             // Some parts like finding optimal conditions really spam the log, so introduce an override:
             if (!suppressLogging) {
@@ -168,24 +163,35 @@ namespace Logic.Mapek {
         }
 
         public void CommitInMemoryInstanceModelToKnowledgeBase() {
-            _turtleWriter.Save(_instanceModel, _filepathArguments.InstanceModelFilepath);
+            // Updates and queries go directly to Fuseki, so there is nothing left to commit.
         }
 
         public void LoadModelsFromKnowledgeBase() {
-            _instanceModel = new Graph();
-            _inferredModel = new Graph();
+            var instanceModel = new Graph();
+            var inferredModel = new Graph();
 
-            _turtleParser.Load(_instanceModel, _filepathArguments.InstanceModelFilepath);
-            _turtleParser.Load(_inferredModel, _filepathArguments.InferredModelFilepath);
+            _instanceModelConnector.LoadGraph(instanceModel, (Uri?)null);
+            _inferredModelConnector.LoadGraph(inferredModel, (Uri?)null);
+
+            _instanceModel = instanceModel;
+            _inferredModel = inferredModel;
+        }
+
+        public void InferModelInKnowledgeBase() {
+            _logger.LogInformation("Inferring action combinations.");
+
+            // The inference service applies the rules to its graph on every replacement, so putting the current instance model there triggers the transformation.
+            var instanceModel = new Graph();
+            _instanceModelConnector.LoadGraph(instanceModel, (Uri?)null);
+            _inferredModelConnector.SaveGraph(instanceModel);
+
+            _logger.LogInformation("The inferred model was generated.");
         }
 
         public void UpdateModel(SparqlParameterizedString query) {
-            var sparqlUpdateParser = new SparqlUpdateParser();
-            var inMemoryDataset = new InMemoryDataset(_instanceModel);
-            var processor = new LeviathanUpdateProcessor(inMemoryDataset);
-            var commandSet = sparqlUpdateParser.ParseFromString(query);
+            var commandText = query.ToString();
 
-            processor.ProcessCommandSet(commandSet);
+            _instanceModelConnector.Update(commandText);
         }
 
         internal void Validate(PropertyCache? pc)
@@ -259,7 +265,17 @@ namespace Logic.Mapek {
         }
 
         private static string GetOptionalQueryResult(ISparqlResult queryResult, string variableName) {
-            return queryResult.HasValue(variableName) ? queryResult[variableName].ToString().Split("^^")[0] : null!;
+            if (!queryResult.HasValue(variableName) || queryResult[variableName] == null)
+                return null;
+            var n = queryResult[variableName];
+            var splits = n.ToString().Split("^^");
+            if (splits.Length > 0)
+            {
+                return splits[0];
+            } else
+            {
+                return null;
+            }
         }
 
         private ConstraintExpression GetOptimalConditionConstraint(INode optimalCondition, PropertyCache propertyCache, bool enablingConstraint = false) {
