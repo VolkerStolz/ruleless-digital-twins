@@ -52,8 +52,8 @@ namespace Logic.Mapek {
             return ExecuteQuery(query);
         }
 
-        // Suppress logging in selected places. An alternative would be to switch to log level DEBUG instead INFO.
         bool suppressLogging = false;
+        // Suppress logging in selected places. An alternative would be to switch to log level DEBUG instead INFO.
 
         private SparqlResultSet ExecuteSuppressedQuery(SparqlParameterizedString query) {
             suppressLogging = true;
