@@ -43,10 +43,10 @@ namespace TestProject
 
     class MyMapekPlan : MapekPlan {
         public MyMapekPlan(IServiceProvider serviceProvider, bool logSimulations = false) : base(serviceProvider) {}
-        protected override void InferActionCombinations() {
+        protected override void InferActionCombinations(MapekKnowledge mapekKnowledge, SimulationTreeNode s) {
             // Call Java explicitly?
             if (true) {
-                base.InferActionCombinations();
+                base.InferActionCombinations(mapekKnowledge, s);
             }
         }
     }

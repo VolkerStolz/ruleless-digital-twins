@@ -80,7 +80,9 @@ namespace SmartNode
             new TurtleParser().Load(initialInstanceModel, filepathArguments.InstanceModelFilepath);
             // A base IRI would make the connector store the model in a named graph instead of the default graph.
             initialInstanceModel.BaseUri = null;
-            new FusekiConnector(new Uri(fusekiArguments.InstanceModelUri)).SaveGraph(initialInstanceModel);
+            var fc = fusekiArguments.InstanceModelUri;
+            fc.DeleteGraph((string)null);
+            fc.SaveGraph(initialInstanceModel);
 
             builder.Services.AddSingleton(filepathArguments);
             builder.Services.AddSingleton(fusekiArguments);

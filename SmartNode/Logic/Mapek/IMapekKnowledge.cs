@@ -14,7 +14,7 @@ namespace Logic.Mapek {
 
         public void UpdateConfigurableParameterValue(ConfigurableParameter configurableParameter);
 
-        public void CommitInMemoryInstanceModelToKnowledgeBase();
+        public void CommitInMemoryInstanceModelToKnowledgeBase(Uri? uri = null);
 
         public void LoadModelsFromKnowledgeBase();
 

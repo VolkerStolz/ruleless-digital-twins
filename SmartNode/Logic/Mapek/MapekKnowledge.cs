@@ -36,16 +36,17 @@ namespace Logic.Mapek {
         private Graph _instanceModel;
         private Graph _inferredModel;
 
-        public MapekKnowledge(IServiceProvider serviceProvider) {
+        public MapekKnowledge(IServiceProvider serviceProvider) : this(serviceProvider, null) {}
+        public MapekKnowledge(IServiceProvider serviceProvider, Uri? uri = null) {
             _logger = serviceProvider.GetRequiredService<ILogger<IMapekKnowledge>>();
             _factory = serviceProvider.GetRequiredService<IFactory>();
             var fusekiArguments = serviceProvider.GetRequiredService<FusekiArguments>();
-            _instanceModelConnector = new FusekiConnector(new Uri(fusekiArguments.InstanceModelUri));
-            _inferredModelConnector = new FusekiConnector(new Uri(fusekiArguments.InferredModelUri));
+            _instanceModelConnector = fusekiArguments.InstanceModelUri;
+            _inferredModelConnector = fusekiArguments.InferredModelUri;
 
             _instanceModel = new Graph();
             _inferredModel = new Graph();
-            LoadModelsFromKnowledgeBase();
+            LoadModelsFromKnowledgeBase(uri);
             
             // If nothing was loaded, don't start the loop.
             if (_instanceModel.IsEmpty) {
@@ -113,26 +114,6 @@ namespace Logic.Mapek {
                     @property meta:hasValue @newValue^^@type .
                 }
                 WHERE {
-                    @property rdf:type sosa:ObservableProperty .
-                    @property meta:hasValue ?oldValue .
-                }");
-
-            query.SetLiteral("newValue", propertyValue.ToLowerInvariant(), false);
-            query.SetUri("type", new Uri(property.OwlType));
-            query.SetUri("property", new Uri(property.Name));
-
-            UpdateModel(query);
-
-            // In case there was no match on an ObservableProperty, try to update a matching Output.
-            query = GetParameterizedStringQuery(@"DELETE {
-                    @property meta:hasValue ?oldValue .
-                }
-                INSERT {
-                    @property meta:hasValue @newValue^^@type .
-                }
-                WHERE {
-                    @property rdf:type ssn:Property .
-                    @property rdf:type ssn:Output .
                     @property meta:hasValue ?oldValue .
                 }");
 
@@ -163,35 +144,57 @@ namespace Logic.Mapek {
         }
 
         public void CommitInMemoryInstanceModelToKnowledgeBase() {
-            // Updates and queries go directly to Fuseki, so there is nothing left to commit.
+            _instanceModelConnector.SaveGraph(_instanceModel);
+        }
+        public void CommitInMemoryInstanceModelToKnowledgeBase(Uri? uri) {
+            var oldUri = _instanceModel.BaseUri;
+            _instanceModel.BaseUri = uri;
+            _logger.LogDebug("Saving instance model {url}", uri);
+            _instanceModelConnector.SaveGraph(_instanceModel);
+            _instanceModel.BaseUri = oldUri;
         }
 
+
         public void LoadModelsFromKnowledgeBase() {
+            LoadModelsFromKnowledgeBase(_instanceModel.BaseUri);
+        }
+
+        public void LoadModelsFromKnowledgeBase(Uri? uri) {
             var instanceModel = new Graph();
             var inferredModel = new Graph();
 
-            _instanceModelConnector.LoadGraph(instanceModel, (Uri?)null);
-            _inferredModelConnector.LoadGraph(inferredModel, (Uri?)null);
-
+            _logger.LogDebug("Loading instance model {url}", uri);
+            _instanceModelConnector.LoadGraph(instanceModel, uri);
+            // TODO: HasGraph(uri) broken?
+            var gs = _inferredModelConnector.ListGraphNames();
+            // We always load the default graph here, since you'll have to Infer() first anwyay :-]
+            if (uri == null || gs.Contains(uri.ToString())) {
+                _logger.LogDebug("Loading inferred model {url}", uri);
+                _inferredModelConnector.LoadGraph(inferredModel, uri);
+            } else {
+                // You're supposed to call Infer() if you need it,
+                // trip you on an NPE if you don't.
+                _logger.LogDebug("NO INFERRED model {url}, using old one.", uri);
+                inferredModel = _inferredModel;
+            }
             _instanceModel = instanceModel;
             _inferredModel = inferredModel;
         }
 
         public void InferModelInKnowledgeBase() {
-            _logger.LogInformation("Inferring action combinations.");
-
+            _logger.LogInformation("Inferring action combinations for {url}.", _instanceModel.BaseUri);
             // The inference service applies the rules to its graph on every replacement, so putting the current instance model there triggers the transformation.
-            var instanceModel = new Graph();
-            _instanceModelConnector.LoadGraph(instanceModel, (Uri?)null);
-            _inferredModelConnector.SaveGraph(instanceModel);
-
+            _inferredModelConnector.SaveGraph(_instanceModel);
             _logger.LogInformation("The inferred model was generated.");
         }
 
+        SparqlUpdateParser sparqlUpdateParser = new SparqlUpdateParser();
         public void UpdateModel(SparqlParameterizedString query) {
-            var commandText = query.ToString();
+            var inMemoryDataset = new InMemoryDataset(_instanceModel);
+            var processor = new LeviathanUpdateProcessor(inMemoryDataset);
+            var commandSet = sparqlUpdateParser.ParseFromString(query);
 
-            _instanceModelConnector.Update(commandText);
+            processor.ProcessCommandSet(commandSet);
         }
 
         internal void Validate(PropertyCache? pc)

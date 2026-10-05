@@ -26,10 +26,10 @@ namespace TestProject {
 
             public MyMapekPlan(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
-            protected override void InferActionCombinations() {
+            protected override void InferActionCombinations(MapekKnowledge mapekKnowledge, SimulationTreeNode s) {
                 // Call Java explicitly?
-                if (IncubatorTests.runInference) {
-                    base.InferActionCombinations();
+                if (true || IncubatorTests.runInference) {
+                    base.InferActionCombinations(mapekKnowledge, s);
                 }
             }
         }
@@ -40,7 +40,7 @@ namespace TestProject {
         [InlineData(37.0, false, "Incubator.py", "incubator.ttl", "incubator-out.ttl", 4)]
         // This one used to glitch with an INF-crash in the FMU, but now passes?!
         [InlineData(53.2359909270973, false, "Incubator.py", "incubator.ttl", "incubator-out.ttl", 4)]
-        public void SimulateFMUOnly(double initial_T_value, bool all_actuators, string fromPython, string model, string inferred, int lookAheadCycles) {
+        public async Task SimulateFMUOnly(double initial_T_value, bool all_actuators, string fromPython, string model, string inferred, int lookAheadCycles) {
             SetupFiles(fromPython, model, inferred, out ServiceProviderMock mock, out FilepathArguments filepathArguments, out MapekKnowledge mapekKnowledge, out MyMapekPlan mapekPlan);
 
             // TODO: Prototype populate cache from FMU.
@@ -103,7 +103,7 @@ namespace TestProject {
             mapekKnowledge.Validate(propertyCacheMock);
 
             // TODO: Assert that there's at least one actuator that's not a parameter.
-            var (simulationTree, simulationPath) = mapekPlan.Plan(new Cache() { PropertyCache = propertyCacheMock, OptimalConditions = [], SoftSensorTreeNodes = [], Actuators = new Dictionary<string, Actuator>() }, 0).Result;
+            var (simulationTree, simulationPath) = await mapekPlan.Plan(new Cache() { PropertyCache = propertyCacheMock, OptimalConditions = [], SoftSensorTreeNodes = [], Actuators = new Dictionary<string, Actuator>() }, 0);
             crashed = false;
 
             // Only valid AFTER focing evaluation through simulation:

@@ -51,7 +51,7 @@ namespace TestProject.Mocks.ServiceMocks {
             throw new NotImplementedException();
         }
 
-        public void CommitInMemoryInstanceModelToKnowledgeBase() {
+        public void CommitInMemoryInstanceModelToKnowledgeBase(Uri? uri) {
             
         }
 
