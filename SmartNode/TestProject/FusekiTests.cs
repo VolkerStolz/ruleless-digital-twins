@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using VDS.RDF;
 using VDS.RDF.Parsing;
@@ -71,8 +72,19 @@ namespace TestProject {
             try {
                 var model = new Graph();
                 dataConnector.LoadGraph(model, (Uri?)null);
+                model.BaseUri = new Uri("http://vs/");
+                // Inference doesn't change the model we're saving:
+                var count = model.Triples.Count;
+                Console.Out.WriteLine($"Triples orig: {count}");
                 inferenceConnector.SaveGraph(model);
-                inferredModel = Assert.IsAssignableFrom<IGraph>(inferenceConnector.Query("CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }"));
+                Assert.Equal(count, model.Triples.Count);
+                // Fails:
+                // inferredModel = Assert.IsAssignableFrom<IGraph>(inferenceConnector.Query("CONSTRUCT { ?s ?p ?o } WHERE { GRAPH <http://vs/> {?s ?p ?o } . }"));
+                // Succeeds:
+                inferredModel = Assert.IsAssignableFrom<IGraph>(inferenceConnector.Query("CONSTRUCT { ?s ?p ?o } WHERE {?s ?p ?o }"));
+                // Ick:
+                Assert.Null(inferredModel.BaseUri);
+                Console.Out.WriteLine($"Triples inferred: {inferredModel.Triples.Count}");
             } catch (Exception exception) {
                 // Surfaces the error returned by Fuseki.
                 Console.Error.WriteLine($"Fuseki returned an error: {exception}");
@@ -81,9 +93,11 @@ namespace TestProject {
 
             var originalModel = new Graph();
             new TurtleParser().Load(originalModel, ModelFilepath);
+            // Works:
+            // new CompressingTurtleWriter(TurtleSyntax.W3C).Save(originalModel, Console.Out);
             Assert.True(inferredModel.Triples.Count > originalModel.Triples.Count, "No triples were inferred.");
-
-            // The compressing writer overflows the stack on the cyclic collections introduced by inference.            new TurtleWriter().Save(inferredModel, Console.Out);
+            // Doesn't:
+            // new CompressingTurtleWriter(TurtleSyntax.W3C).Save(inferredModel, Console.Out);
         }
     }
 }
