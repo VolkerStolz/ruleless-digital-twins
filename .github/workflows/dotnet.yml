@@ -14,7 +14,7 @@ jobs:
 
     runs-on: ubuntu-latest
     container:
-      image: volkers/smartnode:latest
+      image: volkers/rdtenv:latest
 
     steps:
     - uses: actions/checkout@v4
