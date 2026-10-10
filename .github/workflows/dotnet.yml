@@ -28,9 +28,9 @@ jobs:
       run: dotnet restore SmartNode/SmartNode.sln
     - name: Tweak git
       run: git config --global --add safe.directory /__w/ruleless-digital-twins/ruleless-digital-twins
-    - name: Build
-      run: dotnet build --no-restore SmartNode/SmartNode.sln
     - name: Build Python FMUs
       run: cd SmartNode/Implementations/FMUs/PythonFMU ; sh build_unix.sh ; python3 setup.py install
+    - name: Build
+      run: dotnet build --no-restore SmartNode/SmartNode.sln
     - name: Test
       run: dotnet test --no-build --verbosity normal dotnet test --no-build --verbosity normal SmartNode/SmartNode.sln --filter "FullyQualifiedName~TestProject.MapekTests"
