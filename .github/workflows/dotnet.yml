@@ -25,7 +25,9 @@ jobs:
       with:
         dotnet-version: 8.0.x
     - name: Restore dependencies
-      run: dotnet restore SmartNode/SmartNode.sln 
+      run: dotnet restore SmartNode/SmartNode.sln
+    - name: Tweak git
+      run: git config --global --add safe.directory /__w/ruleless-digital-twins/ruleless-digital-twins
     - name: Build
       run: dotnet build --no-restore SmartNode/SmartNode.sln 
     - name: Test
