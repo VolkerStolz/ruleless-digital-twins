@@ -32,6 +32,8 @@ jobs:
       run: (cd SmartNode/Implementations/FMUs/Nordpool-FMU && make clean all && cp NordPool.fmu ..) ; (cd SmartNode/Implementations/FMUs/Fakepool-FMU && make clean all && cp Fakepool.fmu ..) ; (cd SmartNode/Implementations/FMUs/Yr-Weather-FMU && make clean all && cp YrWeather.fmu ..)
     - name: Build
       run: dotnet build --no-restore SmartNode/SmartNode.sln
+    - name: Launch Fuseki
+      run: sh .devcontainer/start-fuseki.sh
     - name: Test
       run: dotnet test --no-build --verbosity normal SmartNode/SmartNode.sln --filter Category=CI --logger "trx;LogFileName=TestResults.trx" || true
     - name: Upload test results
