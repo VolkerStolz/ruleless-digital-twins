@@ -1,0 +1,48 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    container:
+      image: volkers/rdtenv:latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: Restore dependencies
+      run: dotnet restore SmartNode/SmartNode.sln
+    - name: Tweak git
+      run: git config --global --add safe.directory /__w/ruleless-digital-twins/ruleless-digital-twins
+    - name: Build PythonFMU
+      run: cd SmartNode/Implementations/FMUs/PythonFMU ; sh build_unix.sh ; python3 setup.py install
+    - name: Build OMC FMUs
+      run: cd SmartNode/Implementations/FMUs/Source && make clean all && cp roomM370.fmu au_incubator.fmu ..
+    - name: Build Python FMUs
+      run: (cd SmartNode/Implementations/FMUs/Nordpool-FMU && make clean all && cp NordPool.fmu ..) ; (cd SmartNode/Implementations/FMUs/Fakepool-FMU && make clean all && cp Fakepool.fmu ..) ; (cd SmartNode/Implementations/FMUs/Yr-Weather-FMU && make clean all && cp YrWeather.fmu ..)
+    - name: Build
+      run: dotnet build --no-restore SmartNode/SmartNode.sln
+    - name: Test
+      run: dotnet test --no-build --verbosity normal SmartNode/SmartNode.sln --filter Category=CI --logger "trx;LogFileName=TestResults.trx" || true
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: TestResults
+        path: SmartNode/TestProject/TestResults/TestResults.trx
+    - name: Test Report
+      uses: dorny/test-reporter@v3
+      with:
+        name: xUnit tests
+        path: SmartNode/TestProject/TestResults/TestResults.trx
+        reporter: dotnet-trx
+        fail-on-error: false

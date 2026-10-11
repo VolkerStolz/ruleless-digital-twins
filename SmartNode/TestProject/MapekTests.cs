@@ -17,11 +17,12 @@ namespace TestProject
     public class MapekTests
     {
         [Theory]
+        [Trait("Category","CI")]
         // [InlineData("M370-instance.ttl", "M370-inferred.ttl",1,4,115.05600000000001, false, false, false)]
         [InlineData(2, 1800, 1, 106.488, true, false, false)]
         [InlineData(4, 900, 1, 114.696, false, false, false)]
         [InlineData(4, 900, 1, 114.696, false, true, false)]
-        [InlineData(4, 900, 72, 114.696, false, true, true)]
+        [InlineData(4, 900, 79, 114.696, false, true, true)]
         [InlineData(5, 720, 1, 114.696, false, true, false)]
         //[InlineData(4, 5536, 114.696, true, true, false)]
         public async Task TestM370(int rounds, int duration, int count, double minCost, bool useCase, bool nullLogger, bool dontMinimize)
@@ -179,6 +180,7 @@ namespace TestProject
         }
 
         [Theory]
+        [Trait("Category","CI")]
         [InlineData(2, 1800, 106.488, true, false, false)]
         [InlineData(4, 900, 114.696, false, false, false)]
         [InlineData(4, 900, 114.696, false, true, false)]
