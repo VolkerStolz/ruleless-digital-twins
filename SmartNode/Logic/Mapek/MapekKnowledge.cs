@@ -43,11 +43,8 @@ namespace Logic.Mapek {
             var fusekiArguments = serviceProvider.GetRequiredService<FusekiArguments>();
             _instanceModelConnector = fusekiArguments.InstanceModelUri;
             _inferredModelConnector = fusekiArguments.InferredModelUri;
-
-            _instanceModel = new Graph();
-            _inferredModel = new Graph();
-            LoadModelsFromKnowledgeBase(uri);
             
+            LoadModelsFromKnowledgeBase(uri);
             // If nothing was loaded, don't start the loop.
             if (_instanceModel.IsEmpty) {
                 throw new Exception("There is nothing in the instance model graph.");
@@ -143,48 +140,41 @@ namespace Logic.Mapek {
             UpdateModel(query);
         }
 
-        public void CommitInMemoryInstanceModelToKnowledgeBase() {
-            _instanceModelConnector.SaveGraph(_instanceModel);
+        public void CommitInMemoryInstanceModelToKnowledgeBase(Uri? uri = null) {
+            // No longer necessary, we i) never write the new instance back but just roll with it in memory,
+            // and ii) the intention was to make it accessible to inference, so we only do exactly that there.
+            // _instanceModelConnector.SaveGraph(_instanceModel);
         }
-        public void CommitInMemoryInstanceModelToKnowledgeBase(Uri? uri) {
-            var oldUri = _instanceModel.BaseUri;
-            _instanceModel.BaseUri = uri;
-            _logger.LogDebug("Saving instance model {url}", uri);
-            _instanceModelConnector.SaveGraph(_instanceModel);
-            _instanceModel.BaseUri = oldUri;
-        }
-
 
         public void LoadModelsFromKnowledgeBase() {
             LoadModelsFromKnowledgeBase(_instanceModel.BaseUri);
         }
 
         public void LoadModelsFromKnowledgeBase(Uri? uri) {
-            var instanceModel = new Graph();
-            var inferredModel = new Graph();
-
-            _logger.LogDebug("Loading instance model {url}", uri);
-            _instanceModelConnector.LoadGraph(instanceModel, uri);
-            // TODO: HasGraph(uri) broken?
-            var gs = _inferredModelConnector.ListGraphNames();
-            // We always load the default graph here, since you'll have to Infer() first anwyay :-]
-            if (uri == null || gs.Contains(uri.ToString())) {
-                _logger.LogDebug("Loading inferred model {url}", uri);
-                _inferredModelConnector.LoadGraph(inferredModel, uri);
-            } else {
-                // You're supposed to call Infer() if you need it,
-                // trip you on an NPE if you don't.
-                _logger.LogDebug("NO INFERRED model {url}, using old one.", uri);
-                inferredModel = _inferredModel;
+            // Unfortunately inference doesn't work with named graphs that have a URI,
+            // so you're going to see a lot of (null) here for now.
+            if (_instanceModel == null) {
+                _instanceModel = new Graph();
+                _logger.LogDebug("Loading instance model (URL={url})", uri);
+                // We haven't cleaned up the code-paths yet, so we don't know if this is the first time
+                // or a subsequent time. You have to have separately stored the initial model in Fuseki here
+                // using the static helper initially, like Program.cs does.
+                _instanceModelConnector.LoadGraph(_instanceModel, uri);
             }
-            _instanceModel = instanceModel;
-            _inferredModel = inferredModel;
+            if (_inferredModel == null) {
+                // If we just started up, run initial inference.
+                _inferredModel = new Graph();
+                InferModelInKnowledgeBase();
+            } else {
+                _logger.LogDebug("Reusing old inferred model.");
+            }
         }
 
         public void InferModelInKnowledgeBase() {
-            _logger.LogInformation("Inferring action combinations for {url}.", _instanceModel.BaseUri);
+            _logger.LogInformation("Inferring action combinations for URL={url}.", _instanceModel.BaseUri);
             // The inference service applies the rules to its graph on every replacement, so putting the current instance model there triggers the transformation.
             _inferredModelConnector.SaveGraph(_instanceModel);
+            _inferredModelConnector.LoadGraph(_inferredModel, _instanceModel.BaseUri);
             _logger.LogInformation("The inferred model was generated.");
         }
 

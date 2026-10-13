@@ -178,16 +178,15 @@ namespace Logic.Mapek
             bool reloadInferredModel,
             IEnumerable<IEnumerable<Models.OntologicalModels.Action>> actionCombinations,
             PropertyCache propertyCache) {
-            // Save under new URL:
-            var uri = new Uri("http://my/"+simulationTreeNode.NodeItem.GetHashCode().ToString());
-            // XXX WIP -- except that's where it breaks down, since we "don't find" the right
-            //  the right inferred submodel otherwise. So stick with the default for now.
-            uri = null;
+                // Unfortunately no named graphs for now.
+            Uri? uri = null;
             // Update the restriction setting in the instance model to run the inference rules correctly.
             EnsureUpdatedRestrictionSetting(uri);
-            // Roll fresh instance with the models we just saved...
-            // ... and make sure they have their own domain in Fuseki:
-            var mk = new MapekKnowledge(_serviceProvider, uri);
+            // We planned to roll a fresh instance with the models we just saved
+            // and make sure they have their own named graph in Fuseki in preparation for parallelization.
+            // Unfortunately we're still queueing on Fuseki, so we save ourselves this trouble for now and
+            // just soldier on with our single instance.
+            var mk = _mapekKnowledge; // XXX new MapekKnowledge(_serviceProvider, uri);
 
             if (_restrictToReactiveActionsOnly) {
                 // If the RDT runs in reactive mode, then write the current simulation's values into the instance model for
@@ -196,22 +195,19 @@ namespace Logic.Mapek
                     UpdateInstanceModelWithSimulationValues(mk, simulationTreeNode.NodeItem.PropertyCache!);
                 }
                 InferActionCombinations(mk, simulationTreeNode);
-                _lastInferredUri = uri;
 
                 // Check the performance flags for rerunning the inference engine and reloading the instance model.
                 unrestrictedInferenceExecuted = false;
                 reloadInferredModel = true;
             } else if (!_restrictToReactiveActionsOnly && !unrestrictedInferenceExecuted) {
                 InferActionCombinations(mk, simulationTreeNode);
-                _lastInferredUri = uri;
                 // If the RDT runs in proactive mode, then we don't have to rerun the inference until the setting is changed.
                 unrestrictedInferenceExecuted = true;
             } else
             {
-                
+                // Skipping inference.
             }
 
-            
             // Only reload the instance model if a new set of ActionCombinations has been inferred.
             if (reloadInferredModel) {
                 actionCombinations = GetActionCombinations(mk, propertyCache);
@@ -267,6 +263,7 @@ namespace Logic.Mapek
         // Updates the setting for restricting Actions and thus ActionCombinations only to those mitigating OptimalConditions.
         private void EnsureUpdatedRestrictionSetting(Uri uri) {
             // Write the setting at least once to disk. Only write again if the setting changes.
+            // TODO: mostly nops now.
             if (_savedReactiveSetting) {
                 if (_restrictToReactiveActionsOnly == _restrictToReactiveActionsOnlyOld) {
                     if (uri != null) {
@@ -298,7 +295,7 @@ namespace Logic.Mapek
             _mapekKnowledge.CommitInMemoryInstanceModelToKnowledgeBase(uri);
         }
 
-        private static void UpdateInstanceModelWithSimulationValues(MapekKnowledge mapekKnowledge, PropertyCache simulationPropertyCache) {
+        private static void UpdateInstanceModelWithSimulationValues(IMapekKnowledge mapekKnowledge, PropertyCache simulationPropertyCache) {
             foreach (var configurableParameterKeyValue in simulationPropertyCache.ConfigurableParameters) {
                 mapekKnowledge.UpdateConfigurableParameterValue(configurableParameterKeyValue.Value);
             }
@@ -310,13 +307,13 @@ namespace Logic.Mapek
             mapekKnowledge.CommitInMemoryInstanceModelToKnowledgeBase();
         }
 
-        protected virtual void InferActionCombinations(MapekKnowledge mapekKnowledge, SimulationTreeNode s) {
+        protected virtual void InferActionCombinations(IMapekKnowledge mapekKnowledge, SimulationTreeNode s) {
             // The instance model was committed to Fuseki beforehand; have Fuseki apply the inference rules to it.
             mapekKnowledge.InferModelInKnowledgeBase();
         }
 
         // This method currently only supports ActuationActions.
-        private static List<List<Models.OntologicalModels.Action>> GetActionCombinations(MapekKnowledge mapekKnowledge, PropertyCache propertyCache) {
+        private static List<List<Models.OntologicalModels.Action>> GetActionCombinations(IMapekKnowledge mapekKnowledge, PropertyCache propertyCache) {
             var actionCombinations = new List<List<Models.OntologicalModels.Action>>();
 
             var actionCombinationQuery = mapekKnowledge.GetParameterizedStringQuery(@"SELECT ?actionCombination (GROUP_CONCAT(?action; SEPARATOR="" "") AS ?actions) WHERE {
@@ -333,10 +330,7 @@ namespace Logic.Mapek
 	                ?actionCombination meta:hasActions ?actionList .
 	                ?actionList rdf:rest*/rdf:first ?action . }
                 GROUP BY ?actionCombination");
-
-            // Make sure the updated inferred model is reloaded before querying for ActionCombinations.
-            mapekKnowledge.LoadModelsFromKnowledgeBase();
-            
+           
             var actionCombinationQueryResult = mapekKnowledge.ExecuteQuery(actionCombinationQuery, true);
 
             actionCombinationQueryResult.Results.ForEach(combinationResult => {
@@ -603,7 +597,6 @@ namespace Logic.Mapek
 
         VDS.RDF.Query.SparqlResultSet staticObservables = null;
         public IEnumerable<FOp> FitnessOps = [];
-        private Uri _lastInferredUri;
 
         private VDS.RDF.Query.SparqlResultSet GetStaticObservables() {
             if (staticObservables != null) {
