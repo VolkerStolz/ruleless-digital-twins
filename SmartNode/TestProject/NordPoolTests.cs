@@ -56,7 +56,7 @@ namespace TestProject
         [Trait("Category","NOCI")] // Don't actually talk to NordPool
         [InlineData(null, "nordpool-simple.ttl", "nordpool-out.ttl", 4)]
         [InlineData("SimpleNordpool.py", "nordpool1.ttl", "nordpool1-out.ttl", 4)]
-        public void Smallest_model_builds_tree_and_simulates(string? fromPython, string model, string inferred, int lookAheadCycles) {
+        public async Task Smallest_model_builds_tree_and_simulates(string? fromPython, string model, string inferred, int lookAheadCycles) {
             var rootDirectory = Directory.GetParent(Assembly.GetExecutingAssembly().Location)!.Parent!.Parent!.Parent!.Parent!.Parent!.FullName;
             var modelFilePath = Path.Combine(rootDirectory, "models-and-rules");
             var inferredFilePath = Path.Combine(rootDirectory, $"models-and-rules{Path.DirectorySeparatorChar}{inferred}");
@@ -151,7 +151,7 @@ namespace TestProject
 
             var simulations = mapekPlan.GetSimulationsAndGenerateSimulationTree(lookAheadCycles, 0, simulationTree, false, true, new List<List<Logic.Models.OntologicalModels.Action>>(), propertyCacheMock);
 
-            mapekPlan.Simulate(simulations, []);
+            await mapekPlan.Simulate(simulations, []);
 
             // Only valid AFTER focing evaluation through simulation:
             Assert.Single(simulationTree.SimulationPaths);
