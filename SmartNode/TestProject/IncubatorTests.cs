@@ -127,8 +127,8 @@ namespace TestProject {
             crashed = false;
         }
 
-        [Theory]
-        [Trait("Category","NOCI")]
+        [Theory(Explicit=true)]
+        [Trait("Category","NOCI")]        
         [InlineData("Incubator.py", "incubator.ttl", "incubator-out.ttl", 4)]
         public void SimulateFromAMQ(string fromPython, string model, string inferred, int lookAheadCycles) {
             SetupFiles(fromPython, model, inferred, out ServiceProviderMock mock, out FilepathArguments filepathArguments, out MapekKnowledge mapekKnowledge, out EuclidMapekPlan mapekPlan);

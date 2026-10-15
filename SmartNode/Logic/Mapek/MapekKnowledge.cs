@@ -83,12 +83,12 @@ namespace Logic.Mapek {
         }
 
         public SparqlResultSet ExecuteQuery(SparqlParameterizedString query, bool useInferredModel = false) {
-            var connector = useInferredModel ? _inferredModelConnector : _instanceModelConnector;
-            var queryResult = (SparqlResultSet)connector.Query(query.ToString());
+            // var queryResult =  useInferredModel ? (SparqlResultSet)_inferredModel.ExecuteQuery(query) : (SparqlResultSet)_instanceModel.ExecuteQuery(query);
+            var queryResult =  useInferredModel ? (SparqlResultSet)_inferredModelConnector.Query(query.ToString()) : (SparqlResultSet)_instanceModel.ExecuteQuery(query);
 
             // Some parts like finding optimal conditions really spam the log, so introduce an override:
             if (!suppressLogging) {
-                _logger.LogInformation("Executed query: {query} ({numResults})", query.CommandText, queryResult.Results.Count);
+                _logger.LogInformation("Executed query (inf={inf}): {query} ({numResults})", useInferredModel, query.CommandText, queryResult.Results.Count);
 
                 if (!queryResult.IsEmpty) {
                     var resultString = string.Join("\n", queryResult.Results.Select(r => r.ToString()));
@@ -174,8 +174,10 @@ namespace Logic.Mapek {
             _logger.LogInformation("Inferring action combinations for URL={url}.", _instanceModel.BaseUri);
             // The inference service applies the rules to its graph on every replacement, so putting the current instance model there triggers the transformation.
             _inferredModelConnector.SaveGraph(_instanceModel);
-            _inferredModelConnector.LoadGraph(_inferredModel, _instanceModel.BaseUri);
-            _logger.LogInformation("The inferred model was generated.");
+            // We don't reload, since we're querying Fuseki directly:
+            // TODO: Investigate if we could/should use in-memory-queries here as well or not.
+            // _inferredModelConnector.LoadGraph(_inferredModel, _instanceModel.BaseUri);
+            // _logger.LogInformation("The inferred model was generated.");
         }
 
         SparqlUpdateParser sparqlUpdateParser = new SparqlUpdateParser();
