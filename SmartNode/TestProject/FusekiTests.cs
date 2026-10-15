@@ -72,7 +72,8 @@ namespace TestProject {
             try {
                 var model = new Graph();
                 dataConnector.LoadGraph(model, (Uri?)null);
-                model.BaseUri = new Uri("http://vs/");
+                // We can't use named graphs here, because then the inference fails, sniff sniff, see below:
+                // model.BaseUri = new Uri("http://vs/");
                 // Inference doesn't change the model we're saving:
                 var count = model.Triples.Count;
                 Console.Out.WriteLine($"Triples orig: {count}");
@@ -95,7 +96,7 @@ namespace TestProject {
             new TurtleParser().Load(originalModel, ModelFilepath);
             // Works:
             // new CompressingTurtleWriter(TurtleSyntax.W3C).Save(originalModel, Console.Out);
-            Assert.True(inferredModel.Triples.Count > originalModel.Triples.Count, "No triples were inferred.");
+            Assert.True(inferredModel.Triples.Count > originalModel.Triples.Count, "No triples were inferred (inf: {inferredModel.Triples.Count} orig: {originalModel.Triples.Count}).");
             // Doesn't:
             // new CompressingTurtleWriter(TurtleSyntax.W3C).Save(inferredModel, Console.Out);
         }
