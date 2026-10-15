@@ -53,6 +53,7 @@ namespace TestProject
 
     public class NordPoolTests {
         [Theory]
+        [Trait("Category","NOCI")] // Don't actually talk to NordPool
         [InlineData(null, "nordpool-simple.ttl", "nordpool-out.ttl", 4)]
         [InlineData("SimpleNordpool.py", "nordpool1.ttl", "nordpool1-out.ttl", 4)]
         public void Smallest_model_builds_tree_and_simulates(string? fromPython, string model, string inferred, int lookAheadCycles) {

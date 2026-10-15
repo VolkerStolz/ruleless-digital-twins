@@ -29,13 +29,13 @@ jobs:
     - name: Build PythonFMU
       run: cd SmartNode/Implementations/FMUs/PythonFMU ; sh build_unix.sh ; python3 setup.py install
     - name: Build OMC FMUs
-      run: cd SmartNode/Implementations/FMUs/Source && make clean all && cp roomM370.fmu au_incubator.fmu ..
+      run: cd SmartNode/Implementations/FMUs/Source && make -j2 clean all && cp roomM370.fmu au_incubator.fmu ..
     - name: Build Python FMUs
       run: (cd SmartNode/Implementations/FMUs/Nordpool-FMU && make clean all && cp NordPool.fmu ..) ; (cd SmartNode/Implementations/FMUs/Fakepool-FMU && make clean all && cp Fakepool.fmu ..) ; (cd SmartNode/Implementations/FMUs/Yr-Weather-FMU && make clean all && cp YrWeather.fmu ..)
     - name: Build
       run: dotnet build --no-restore SmartNode/SmartNode.sln
     - name: Test
-      run: dotnet test --no-build --verbosity normal SmartNode/SmartNode.sln --filter Category=CI --logger "trx;LogFileName=TestResults.trx" || true
+      run: dotnet test --no-build --verbosity normal SmartNode/SmartNode.sln --filter Category!=NOCI --logger "trx;LogFileName=TestResults.trx" || true
     - name: Upload test results
       uses: actions/upload-artifact@v4
       with:
