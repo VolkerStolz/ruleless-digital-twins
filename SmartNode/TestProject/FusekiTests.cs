@@ -96,7 +96,7 @@ namespace TestProject {
             new TurtleParser().Load(originalModel, ModelFilepath);
             // Works:
             // new CompressingTurtleWriter(TurtleSyntax.W3C).Save(originalModel, Console.Out);
-            Assert.True(inferredModel.Triples.Count > originalModel.Triples.Count, "No triples were inferred (inf: {inferredModel.Triples.Count} orig: {originalModel.Triples.Count}).");
+            Assert.True(inferredModel.Triples.Count > originalModel.Triples.Count, $"No triples were inferred (inf: {inferredModel.Triples.Count} orig: {originalModel.Triples.Count}).");
             // Doesn't:
             // new CompressingTurtleWriter(TurtleSyntax.W3C).Save(inferredModel, Console.Out);
         }
