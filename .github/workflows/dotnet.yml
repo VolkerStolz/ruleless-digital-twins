@@ -36,6 +36,12 @@ jobs:
       run: dotnet build --no-restore SmartNode/SmartNode.sln
     - name: Test
       run: dotnet test --no-build --verbosity normal SmartNode/SmartNode.sln --filter Category!=NOCI --logger "trx;LogFileName=TestResults.trx" || true
+    - name: Preserve Fuseki log
+      uses: actions/upload-artifact@v4
+      with:
+        name: Fuseki
+        path: /tmp/fuseki/fuseki.log
+
     - name: Upload test results
       uses: actions/upload-artifact@v4
       with:
