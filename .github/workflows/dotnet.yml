@@ -29,7 +29,7 @@ jobs:
     - name: Build PythonFMU
       run: cd SmartNode/Implementations/FMUs/PythonFMU ; sh build_unix.sh ; python3 setup.py install
     - name: Build OMC FMUs
-      run: cd SmartNode/Implementations/FMUs/Source && make -j2 clean all && cp roomM370.fmu au_incubator.fmu ..
+      run: cd SmartNode/Implementations/FMUs/Source && make clean all && cp roomM370.fmu au_incubator.fmu ..
     - name: Build Python FMUs
       run: (cd SmartNode/Implementations/FMUs/Nordpool-FMU && make clean all && cp NordPool.fmu ..) ; (cd SmartNode/Implementations/FMUs/Fakepool-FMU && make clean all && cp Fakepool.fmu ..) ; (cd SmartNode/Implementations/FMUs/Yr-Weather-FMU && make clean all && cp YrWeather.fmu ..)
     - name: Build
