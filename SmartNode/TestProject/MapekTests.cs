@@ -37,13 +37,10 @@ namespace TestProject
                 InferenceEngineFilepath = Path.GetFullPath(Path.Combine(rootDirectory, "models-and-rules", "ruleless-digital-twins-inference-engine.jar")),
                 InferenceRulesFilepath = Path.GetFullPath(Path.Combine(rootDirectory, "models-and-rules", "inference-rules.rules")),
                 InferredModelFilepath = Path.GetFullPath(Path.Combine(rootDirectory, "models-and-rules", "M370-simulation-inferred.ttl")),
-                InstanceModelFilepath = Path.GetFullPath("/tmp/M370.ttl"),
+                InstanceModelFilepath = Path.GetFullPath(Path.Combine(rootDirectory, "models-and-rules", "M370.ttl")),
                 OntologyFilepath = Path.GetFullPath(Path.Combine(rootDirectory, "ontology", "ruleless-digital-twins.ttl"))
             };
             serviceProvider.Add(filepathArguments);
-            // Refresh model (#70):
-            var model = Path.GetFullPath(Path.Combine(rootDirectory, "models-and-rules", "M370.ttl"));
-            File.Copy(model.ToString(), filepathArguments.InstanceModelFilepath.ToString(), true);
             FusekiTestHelper.UploadInstanceModel(filepathArguments.InstanceModelFilepath);
             serviceProvider.Add(new FusekiArguments());
 
