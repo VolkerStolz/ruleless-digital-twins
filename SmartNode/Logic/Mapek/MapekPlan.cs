@@ -266,9 +266,6 @@ namespace Logic.Mapek
             // TODO: mostly nops now.
             if (_savedReactiveSetting) {
                 if (_restrictToReactiveActionsOnly == _restrictToReactiveActionsOnlyOld) {
-                    if (uri != null) {
-                        _mapekKnowledge.CommitInMemoryInstanceModelToKnowledgeBase(uri);
-                    }
                     return;
                 }
             } else {
@@ -290,9 +287,8 @@ namespace Logic.Mapek
 
             query.SetLiteral("newValue", _restrictToReactiveActionsOnly);
 
-            // Update the instance model and commit its contents to the disk.
+            // Update the instance model.
             _mapekKnowledge.UpdateModel(query);
-            _mapekKnowledge.CommitInMemoryInstanceModelToKnowledgeBase(uri);
         }
 
         private static void UpdateInstanceModelWithSimulationValues(IMapekKnowledge mapekKnowledge, PropertyCache simulationPropertyCache) {
@@ -303,8 +299,6 @@ namespace Logic.Mapek
             foreach (var propertyKeyValue in simulationPropertyCache.Properties) {
                 mapekKnowledge.UpdatePropertyValue(propertyKeyValue.Value);
             }
-
-            mapekKnowledge.CommitInMemoryInstanceModelToKnowledgeBase();
         }
 
         protected virtual void InferActionCombinations(IMapekKnowledge mapekKnowledge, SimulationTreeNode s) {

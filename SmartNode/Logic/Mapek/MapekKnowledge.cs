@@ -140,12 +140,6 @@ namespace Logic.Mapek {
             UpdateModel(query);
         }
 
-        public void CommitInMemoryInstanceModelToKnowledgeBase(Uri? uri = null) {
-            // No longer necessary, we i) never write the new instance back but just roll with it in memory,
-            // and ii) the intention was to make it accessible to inference, so we only do exactly that there.
-            // _instanceModelConnector.SaveGraph(_instanceModel);
-        }
-
         public void LoadModelsFromKnowledgeBase() {
             LoadModelsFromKnowledgeBase(_instanceModel.BaseUri);
         }
