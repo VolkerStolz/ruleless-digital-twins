@@ -108,7 +108,7 @@ namespace TestProject
                 Stopwatch sw = Stopwatch.StartNew();
                 var simulationPathAndTree = await plan.Plan(cache, 0);
                 sw.Stop();
-                Debug.WriteLine($"Planning took {sw.Elapsed.TotalSeconds} seconds total.");
+                Debug.WriteLine($"Planning {simulationPathAndTree.Item1.SimulationPaths.Count()} simulations took {sw.Elapsed.TotalSeconds} seconds total.");
 
                 // Check that all best paths are as they should be:
                 IEnumerable<SimulationPath> paths = plan.GetOptimalSimulationPath(cache, simulationPathAndTree.Item1.SimulationPaths);

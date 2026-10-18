@@ -71,6 +71,8 @@ namespace SmartNode
             // Register services here.
             builder.Services.AddLogging(loggingBuilder =>
             {
+                loggingBuilder.ClearProviders();
+                // loggingBuilder.SetMinimumLevel(LogLevel.Debug);
                 loggingBuilder.AddConsole(options => options.TimestampFormat = "HH:mm:ss ");
             });
             var fusekiArguments = builder.Configuration.GetSection("FusekiArguments").Get<FusekiArguments>() ?? new FusekiArguments();
